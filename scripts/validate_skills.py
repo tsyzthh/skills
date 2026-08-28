@@ -243,7 +243,7 @@ def report_thread_ages() -> list[str]:
 
 
 def validate_cross_artifact() -> list[str]:
-    """Cross-artifact consistency checks (C1–C8); see docs/discuss/15-*.md, 33-*.md, 34-*.md."""
+    """Cross-artifact consistency checks (C1–C9); see docs/discuss/15-*.md, 33-*.md, 34-*.md."""
     errors: list[str] = []
 
     if not DECISIONS_MD.is_file():
@@ -359,6 +359,20 @@ def validate_cross_artifact() -> list[str]:
         seen_fact_ids.add(fid)
         errors.extend(_check_fact_row(lineno, cells, known_ids))
 
+    # C9: every INV/ORD/EXP cited in a shipped SKILL.md must exist in DECISIONS.md.
+    # Scope excludes assets/ on purpose — templates carry placeholder ids belonging to
+    # the *user's* project, not this repo. Caught in practice: a partially-reverted
+    # chat turn left skills/proj/SKILL.md citing an ORD that never landed (C4 saw the
+    # round file, nothing saw the skill).
+    for skill_md in sorted(SKILLS_DIR.glob("*/SKILL.md")):
+        if skill_md.parent.name in SKIP_DIRS:
+            continue
+        cited = set(ID_PATTERN.findall(skill_md.read_text(encoding="utf-8")))
+        for rid in sorted(cited - known_ids):
+            errors.append(
+                f"cross-artifact[C9]: skills/{skill_md.parent.name}/SKILL.md cites '{rid}' absent from DECISIONS.md"
+            )
+
     return errors
 
 
@@ -400,7 +414,7 @@ def main(argv: list[str]) -> int:
             print(f"  - {err}", file=sys.stderr)
         return 1
 
-    suffix = " + cross-artifact (C1–C8)" if cross_checked else ""
+    suffix = " + cross-artifact (C1–C9)" if cross_checked else ""
     print(f"ok: {len(skill_dirs)} skill(s) validated{suffix}")
     if cross_checked:
         for line in report_thread_ages():
