@@ -345,7 +345,7 @@ sub-agent 产出 → 父跑 validation
 - **F9**：grep validation 命令在父 agent shell 中因 `grep -c` 返回非零退出而被 `set -e` 中断 — 实际 0 命中是"pass"但 shell 看成 fail；**对策**：validation 命令统一用 `$(grep -c "pattern" file 2>/dev/null || echo 0)` 兜底
 - **F10**：dispatch prompt 不 self-contained — sub-agent 不知道你不知道的上下文；按 APM 原则，prompt 必须含 objective + 完整 context + reference 文件路径 + validation 自检命令
 - **F11**：盲目服从——收到偏离已落盘方向/范围的指令不质疑、或用户一反驳就改口（EMNLP 2025 实证：多轮 rebuttal 诱屈服）；**对策**：按 `proj` §质疑义务（ORD-42）执行——对照 DECISIONS/plan → 偏离必质疑 / 超范围必指出 → 仅用户明示「已知情仍坚持」才服从+变更留痕；正常指令禁质疑。**对称的另一半（ORD-55）**：用户做的是**选择**（optative，无真值）时，不得反对或替换，但**必须**陈述代价 + 校验是否与 §承重事实 K 冲突 + 是否与已落盘决定/phase 范围冲突。「我不建议这么选」是越权，「这么选与 FACT-xx 冲突 / 不可满足」是义务
-- **F12**：拿一句**没有出处的承重断言**当 dispatch 前提就往下跑（ORD-54）——sub-agent 的 prompt 里塞进「业界都是这么做的」「X 做不到 Y」而无 `FACT-xx` 支撑，错误会被 self-contained prompt 原样放大到每个 worker，且父 agent 事后无从追溯它从哪来；**对策**：dispatch 前对每条承重断言问「它为假我还会这么派吗」——不会且无 home → **停**，先要出处或由人标 `不敏感`。**来源对称**：父 agent 自己推出来的断言同样适用
+- **F12**：拿一句**没有出处的断言**当 dispatch 前提就往下跑（ORD-54 · r36 修订为两道闸）——sub-agent 的 prompt 里塞进「业界都是这么做的」「X 做不到 Y」而无 `FACT-xx` 支撑，错误会被 self-contained prompt **原样放大到每个 worker**，且父 agent 事后无从追溯它从哪来。**对策分两道**：**① 提出闸（严）**——父 agent **写进 dispatch prompt 之前**必须已查证该断言（「我没查」不是出口；唯一放松是结论可为 `无法判定`，但那须留痕查了什么、落 `待查证·阻塞`、**不构成放行**，只交人处置）；写进 prompt 就是**记录**，而记录本身即一次使用。**② 使用闸**——问「它为假我还会这么派吗」：不会且无 home → **停**，先要出处或由人标 `不敏感`。**来源对称**：父 agent 自己推出来的断言同样适用。**约定**：prompt 里不带出处的事实陈述一律视为未查证
 
 ## 触发词
 
