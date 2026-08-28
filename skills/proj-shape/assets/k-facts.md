@@ -165,7 +165,7 @@ Parnas 的原文分了三类缺失，且要求结构可分：
 
 ## 已知未闭合风险（诚实披露）
 
-「表会被填成终态、然后没人复查」这条反对**在 round 34 未被驳倒**——开源 ADR 实测约 **63% 创建时状态即 accepted**（[DOI 10.1109/ACCESS.2023.3287654](https://doi.org/10.1109/ACCESS.2023.3287654)），且 Wikipedia 在最强可核查规范加百万编辑者下引用覆盖率天花板仍只有六成。
+「表会被填成终态、然后没人复查」这条反对**在 round 34 未被驳倒**——开源 ADR 实测约 **63% 创建时状态即 accepted**（[ICSA 2026 摘要](https://conf.researchr.org/details/icsa-2026/icsa-2026-papers/34/Architecture-Decision-Records-Adoption-Impact-and-Developer-Engagement-in-Open-Sou)；921 仓中约半数只有 1–5 条见 [DOI 10.1109/ACCESS.2023.3287654](https://doi.org/10.1109/ACCESS.2023.3287654) · `FACT-08`），且 Wikipedia 在最强可核查规范加百万编辑者下引用覆盖率天花板仍只有六成。
 
 故本机制**带观测与退出条件**：
 

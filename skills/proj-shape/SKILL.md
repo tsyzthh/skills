@@ -267,7 +267,7 @@ docs/
 
 **动因（两起同形事故）**：① 一条外部 runtime 事实过期，**六周无人发现**，其间一条 ORD 一直悬在上面；② 用户把「code graph 由 LLM 生成」当背景事实用（实为 tree-sitter 抽 AST 的纯程序步骤），走了冤枉路。两起都不是查证能力不足，是**陈述没有 home**。
 
-**已知未闭合风险（诚实披露）**：「表会被填成终态、然后没人复查」这条反对**未被驳倒**（开源 ADR 实测约 63% 创建即 accepted）→ 带 **EXP-19 / EXP-20** 观测与明确撤表降级路径，见 [assets/k-facts.md](assets/k-facts.md) 末节。
+**已知未闭合风险（诚实披露）**：「表会被填成终态、然后没人复查」这条反对**未被驳倒**（开源 ADR 实测约 63% 创建即 accepted · 出处见 `FACT-08`）→ 带 **EXP-19 / EXP-20** 观测与明确撤表降级路径，见 [assets/k-facts.md](assets/k-facts.md) 末节。
 
 ### BRAINSTORM.md（初始想法草稿）
 
