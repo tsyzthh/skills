@@ -29,6 +29,15 @@ THREAD_WIP_STATES = {"open", "blocked"}
 EXP_TABLE_HEADING = "## 待验证尝试"
 SKILLS_REF_PATTERN = re.compile(r"skills/([a-z0-9][a-z0-9-]*)/")
 
+# 承重事实（K）table — see docs/discuss/34-*.md (INV-05 / ORD-53).
+FACT_SECTION_HEADING = "## 承重事实"
+FACT_ID_PATTERN = re.compile(r"^FACT-\d+$")
+FACT_DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+FACT_COLUMNS = 8
+FACT_STATES = {"已查证", "待查证·阻塞", "不敏感"}
+FACT_GROUNDINGS = {"世界固有", "项目已交付", "外部系统"}
+PLACEHOLDER_CELLS = {"", "—", "-", "–"}
+
 
 def parse_frontmatter(skill_md: Path) -> dict:
     text = skill_md.read_text(encoding="utf-8")
@@ -122,6 +131,61 @@ def _sync_section_ids(round_text: str) -> set[str]:
     return ids
 
 
+def _fact_rows(decisions_text: str) -> list[tuple[int, list[str]]]:
+    """Rows of the §承重事实（K） table as (line_no, cells); ORD-53."""
+    rows: list[tuple[int, list[str]]] = []
+    in_section = False
+    for lineno, line in enumerate(decisions_text.splitlines(), start=1):
+        if line.startswith("## "):
+            in_section = line.startswith(FACT_SECTION_HEADING)
+            continue
+        if not in_section:
+            continue
+        stripped = line.strip()
+        if not stripped.startswith("|"):
+            continue
+        cells = [c.strip() for c in stripped.strip("|").split("|")]
+        if cells and FACT_ID_PATTERN.match(cells[0]):
+            rows.append((lineno, cells))
+    return rows
+
+
+def _check_fact_row(lineno: int, cells: list[str], known_ids: set[str]) -> list[str]:
+    """C8: structural checks on one K row. Zero semantics — whether the claim is
+    *true* stays with the human (Four Dark Corners §6.3: K is validated informally);
+    the machine only checks the slot is well-formed. See docs/discuss/34-*.md."""
+    fid = cells[0]
+    prefix = f"cross-artifact[C8]: {fid} (line {lineno})"
+    if len(cells) != FACT_COLUMNS:
+        return [f"{prefix}: has {len(cells)} columns (expected {FACT_COLUMNS})"]
+
+    _, _, evidence, checked_on, supports, grounding, state, recheck = cells
+    errors: list[str] = []
+
+    if state not in FACT_STATES:
+        errors.append(f"{prefix}: 状态 '{state}' not in {sorted(FACT_STATES)}")
+    if grounding not in FACT_GROUNDINGS:
+        errors.append(f"{prefix}: 接地依据 '{grounding}' not in {sorted(FACT_GROUNDINGS)}")
+
+    # Reverse-driven: a fact with no dependent decision is not load-bearing and
+    # belongs in the round file, not here (ORD-53(b)).
+    if supports in PLACEHOLDER_CELLS:
+        errors.append(f"{prefix}: supports is empty — not load-bearing; keep it in the round file")
+    for rid in ID_PATTERN.findall(supports):
+        if rid not in known_ids:
+            errors.append(f"{prefix}: supports '{rid}' absent from DECISIONS.md")
+
+    if state == "已查证":
+        if "http" not in evidence and "](" not in evidence:
+            errors.append(f"{prefix}: 状态=已查证 requires a linked 证据 (got '{evidence}')")
+        if not FACT_DATE_PATTERN.match(checked_on):
+            errors.append(f"{prefix}: 状态=已查证 requires 查证日期 as YYYY-MM-DD (got '{checked_on}')")
+    elif state == "待查证·阻塞" and recheck in PLACEHOLDER_CELLS:
+        errors.append(f"{prefix}: 状态=待查证·阻塞 requires a non-empty 复查触发")
+
+    return errors
+
+
 def _check_thread(entry: object) -> list[str]:
     """C6: a thread row may only hold bounded types — never a sentence."""
     if not isinstance(entry, dict):
@@ -179,7 +243,7 @@ def report_thread_ages() -> list[str]:
 
 
 def validate_cross_artifact() -> list[str]:
-    """Cross-artifact consistency checks (C1–C7); see docs/discuss/15-*.md, 33-*.md."""
+    """Cross-artifact consistency checks (C1–C8); see docs/discuss/15-*.md, 33-*.md, 34-*.md."""
     errors: list[str] = []
 
     if not DECISIONS_MD.is_file():
@@ -285,6 +349,16 @@ def validate_cross_artifact() -> list[str]:
                     f"cross-artifact[C4]: {round_md.name} 同步状态 references '{rid}' absent from DECISIONS.md"
                 )
 
+    # C8: 承重事实（K）table structure (ORD-53). ORD-16 stayed stale for 6 weeks
+    # because no container held the fact it rested on; this checks the container.
+    seen_fact_ids: set[str] = set()
+    for lineno, cells in _fact_rows(decisions_text):
+        fid = cells[0]
+        if fid in seen_fact_ids:
+            errors.append(f"cross-artifact[C8]: duplicate {fid} (line {lineno})")
+        seen_fact_ids.add(fid)
+        errors.extend(_check_fact_row(lineno, cells, known_ids))
+
     return errors
 
 
@@ -326,7 +400,7 @@ def main(argv: list[str]) -> int:
             print(f"  - {err}", file=sys.stderr)
         return 1
 
-    suffix = " + cross-artifact (C1–C7)" if cross_checked else ""
+    suffix = " + cross-artifact (C1–C8)" if cross_checked else ""
     print(f"ok: {len(skill_dirs)} skill(s) validated{suffix}")
     if cross_checked:
         for line in report_thread_ages():
